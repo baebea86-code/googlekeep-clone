@@ -1,3 +1,4 @@
+
 class Note {
   constructor(id, title, text) {
     this.id = id;
@@ -67,7 +68,7 @@ class App {
 
     if (isInactiveFormClickedOn) {
       this.openActiveForm();
-    } else if (!isInactiveFormClickedOn) {
+    } else if (!isInactiveFormClickedOn && !isActiveFormClickedOn) {
       this.closeActiveForm();
     }
   }
