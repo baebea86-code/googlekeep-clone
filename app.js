@@ -14,6 +14,8 @@ class App {
     this.notes = JSON.parse(localStorage.getItem("notes")) || [];
     this.selectedNoteId = "";
     this.miniSidebar = true;
+    this.view = "notes"; // 'notes' or 'archive'
+    this.archived = JSON.parse(localStorage.getItem("archivedNotes")) || [];
 
     this.$activeForm = document.querySelector(".active-form");
     this.$inactiveForm = document.querySelector(".inactive-form");
@@ -60,6 +62,25 @@ class App {
     this.$sidebar.addEventListener("mouseout", (event) => {
       this.handleToggleSidebar();
     });
+    this.$sidebar.addEventListener("click", (event) => {
+      this.handleSidebarClick(event);
+    });
+  }
+
+  handleSidebarClick(event) {
+    const $item = event.target.closest('.sidebar-item');
+    if (!$item) return;
+    // update active item styling
+    this.$sidebar.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active-item'));
+    $item.classList.add('active-item');
+
+    const text = $item.textContent.trim();
+    if (text.includes('Archive')) {
+      this.view = 'archive';
+    } else {
+      this.view = 'notes';
+    }
+    this.displayNotes();
   }
 
   handleFormClick(event) {
@@ -117,7 +138,11 @@ class App {
     const $selectedNote = event.target.closest(".note");
     if ($selectedNote && event.target.closest(".archive")) {
       this.selectedNoteId = $selectedNote.id;
-      this.deleteNote(this.selectedNoteId);
+      if (this.view === 'notes') {
+        this.archiveNote(this.selectedNoteId);
+      } else if (this.view === 'archive') {
+        this.unarchiveNote(this.selectedNoteId);
+      }
     } else {
       return;
     }
@@ -174,6 +199,7 @@ class App {
 
   saveNotes() {
     localStorage.setItem('notes', JSON.stringify(this.notes));
+    localStorage.setItem('archivedNotes', JSON.stringify(this.archived));
   }
 
   render() {
@@ -184,10 +210,12 @@ class App {
 //  onmouseover="app.handleMouseOverNote(this)" onmouseout="app.handleMouseOutNote(this)"
 
   displayNotes() {
-    this.$notes.innerHTML = this.notes
-      .map(
-        (note) =>
-          `
+    const list = this.view === 'notes' ? this.notes : this.archived;
+    this.$notes.innerHTML = list
+      .map((note) => {
+        const archiveIcon = this.view === 'notes' ? 'archive' : 'unarchive';
+        const archiveText = this.view === 'notes' ? 'Archive' : 'Unarchive';
+        return `
         <div class="note" id="${note.id}">
           <span class="material-symbols-outlined check-circle"
             >check_circle</span
@@ -221,9 +249,9 @@ class App {
             </div>
             <div class="tooltip archive">
               <span class="material-symbols-outlined hover small-icon"
-                >archive</span
+                >${archiveIcon}</span
               >
-              <span class="tooltip-text">Archive</span>
+              <span class="tooltip-text">${archiveText}</span>
             </div>
             <div class="tooltip">
               <span class="material-symbols-outlined hover small-icon"
@@ -233,9 +261,25 @@ class App {
             </div>
           </div>
         </div>
-        `
-      )
-      .join("");
+        `;
+      })
+      .join('');
+  }
+
+  archiveNote(id) {
+    const note = this.notes.find(n => n.id === id);
+    if (!note) return;
+    this.notes = this.notes.filter(n => n.id !== id);
+    this.archived = [...this.archived, note];
+    this.render();
+  }
+
+  unarchiveNote(id) {
+    const note = this.archived.find(n => n.id === id);
+    if (!note) return;
+    this.archived = this.archived.filter(n => n.id !== id);
+    this.notes = [...this.notes, note];
+    this.render();
   }
 
   deleteNote(id) {
